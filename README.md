@@ -1,33 +1,156 @@
-# RaceDay — Part 1: System Planning and Database
+RaceDay — Part 1: System Planning and Database
 
-**Module:** PROG6212/w — Programming 2B
-**Assessment:** Portfolio of Evidence, Part 1 (System Planning & Database)
+Module: PROG6212/w — Programming 2B
+Assessment: Portfolio of Evidence, Part 1 — System Planning & Database
+Project: RaceDay Event Management Platform
+Technology Focus: SQL Server, REST API Planning, Database Design, GitHub Actions
 
+1. Introduction
 
-## System Description
+RaceDay is a proposed full-stack, API-driven event management platform designed specifically for the South African road running, walking, and cycling community.
 
-RaceDay is a full-stack, API-driven event management platform built for the South African road running, walking, and cycling community. It replaces the paper-based registration and spreadsheet-driven processes many local events still rely on. Event Organisers can create and manage events, define age/distance categories, and capture participant results, while Participants can browse upcoming events, enrol using a chosen category, track their personal enrolment and results history, and view route information to prepare for race day.
+Many smaller sporting events still rely on manual registration forms, paper-based participant lists, spreadsheets, WhatsApp communication, and manually captured race results. These processes can become difficult to manage as the number of participants, events, categories, and results increases.
 
-This part of the POE contains **no application code**. It documents the planning work completed before development begins in Part 2: the database design (ERD), the API surface (endpoint plan), and the database creation script.
+RaceDay aims to provide a centralised digital platform where event organisers can manage their events and participants can register, enrol, and track their race history through a structured system.
 
-## Roles
+The system is designed around two primary user roles:
 
-| Role | Capabilities |
-|---|---|
-| **Organiser** | Create, edit, and delete events; manage event categories; capture participant results; view all enrolments for their events. |
-| **Participant** | Register an account; browse events; enrol in an event by selecting a category; view their own enrolments; track their own results. |
+Organisers
+Participants
 
+The platform will provide functionality for event creation, event category management, participant enrolment, route information, and race results.
 
-## /docs Folder Contents
+Part 1 focuses exclusively on system planning and database design. No application code is implemented in this phase. The purpose of this part of the Portfolio of Evidence is to establish a clear technical foundation that can be used during application development in Part 2.
 
-| File | Section | Description |
-|---|---|---|
-| `docs/raceday_erd.png` (+ `.svg` source) | Section A | Entity Relationship Diagram — 6 entities (Users, Events, Categories, Routes, Enrolments, Results) with primary keys, foreign keys, and cardinality. |
-| `docs/api_endpoint_plan.md` | Section B | Full API endpoint plan covering Authentication, User Profile, Events, Categories, Event Enrolments, and Results. |
-| `docs/raceday_schema.sql` | Section C | SQL Server script — creates all six tables with constraints and seeds realistic sample data (2 Organisers, 2 Participants, 3 Events, categories, routes, enrolments, a sample result). |
-## Design Notes
+2. Problem Statement
 
-- The ERD includes a **Routes** entity in addition to the required core entities, to support the platform's "live weather and route information" feature described in the background brief — this also lifts the design past the minimum six-entity requirement with a genuinely useful table rather than a padding one.
-- `Users` uses a single table with a `Role` column (`Organiser` / `Participant`) rather than two separate tables, since both roles share the same core attributes (name, email, password, contact details) and only differ in behaviour, which is enforced at the API/application layer in Part 2 — not at the schema level.
-- An Enrolment is unique per `(ParticipantID, EventID)` — a Participant can only enrol once per event — and a Result is unique per `EnrolmentID`, reflecting that at most one result is captured per enrolment.
-- The SQL script was written to match the ERD exactly; there are no deliberate differences between the two.
+Traditional event management processes can create several challenges for local sporting event organisers.
+
+When registrations are handled manually, organisers may need to:
+
+Capture participant information from paper forms.
+Maintain multiple spreadsheets.
+Manually check whether a participant has already registered.
+Keep separate lists for different race categories.
+Manually record race results.
+Search through spreadsheets when participants request historical results.
+Communicate route information separately from registration information.
+Manually update event information when changes occur.
+
+These processes increase the possibility of:
+
+Duplicate registrations.
+Incorrect participant information.
+Lost or inconsistent records.
+Data-entry errors.
+Difficulty retrieving historical results.
+Poor communication between organisers and participants.
+Increased administrative workload.
+
+RaceDay addresses these problems by providing a structured relational database and API-driven system where information can be stored, accessed, and managed from a central platform.
+
+3. Proposed Solution
+
+RaceDay will provide a centralised event management system consisting of a database, REST API, and user-facing application.
+
+The database will store information relating to:
+
+Users
+Events
+Categories
+Routes
+Enrolments
+Results
+
+The REST API will provide controlled access to the database and will allow the future application to perform operations such as:
+
+User registration.
+User authentication.
+Viewing and updating profiles.
+Creating events.
+Editing events.
+Deleting events.
+Managing categories.
+Viewing routes.
+Enrolling participants.
+Viewing enrolments.
+Capturing race results.
+Viewing historical results.
+
+The architecture separates the database from the user interface through the API layer. This provides a more maintainable structure and allows the system to be expanded in future development phases.
+
+4. System Objectives
+
+The primary objective of RaceDay is to create a reliable digital platform for managing sporting events and participant information.
+
+The specific objectives are:
+
+4.1 Digital Event Management
+
+Allow organisers to create, update, and remove sporting events without relying on spreadsheets or paper records.
+
+4.2 Participant Registration
+
+Allow participants to create accounts and maintain their personal information.
+
+4.3 Online Enrolment
+
+Allow participants to browse available events and enrol in an event by selecting an appropriate category.
+
+4.4 Category Management
+
+Allow organisers to create categories based on factors such as:
+
+Age group.
+Gender.
+Distance.
+Race type.
+4.5 Results Management
+
+Allow organisers to capture participant results and allow participants to view their own results history.
+
+4.6 Route Information
+
+Store route-related information associated with events so that participants can access information that assists them in preparing for race day.
+
+4.7 Data Integrity
+
+Ensure that relationships between users, events, categories, enrolments, routes, and results are maintained using database constraints.
+
+4.8 Scalability
+
+Create a database structure that can support additional events, participants, categories, routes, and results as the platform grows.
+
+5. System Scope
+5.1 Included in the System
+
+The initial RaceDay design includes:
+
+User account registration.
+User role management.
+Authentication planning.
+User profile management.
+Event management.
+Category management.
+Route information.
+Participant enrolment.
+Race result management.
+Historical result viewing.
+Relational database storage.
+REST API endpoint planning.
+5.2 Outside the Current Scope
+
+The following functionality is not implemented in Part 1:
+
+Front-end application development.
+Mobile application development.
+Actual REST API implementation.
+Payment processing.
+Online ticket/payment integration.
+Live GPS participant tracking.
+Automatic timing hardware integration.
+Social media integration.
+Email/SMS notification implementation.
+Live weather API implementation.
+
+These features could be considered during future development phases.
