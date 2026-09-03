@@ -68,3 +68,15 @@ View route information
 Enrol in events
 View their own enrolments
 View their own results history
+
+4. Database Design
+
+The RaceDay database contains six entities:
+
+Entity	Purpose
+Users	Stores Organiser and Participant accounts
+Events	Stores sporting event information
+Categories	Stores race categories belonging to events
+Routes	Stores route information for events
+Enrolments	Connects participants to events and categories
+Results	Stores participant race results
