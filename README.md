@@ -124,3 +124,26 @@ Each enrolment can have a maximum of one result.
 EnrolmentID
 
 is unique in the Results table.
+6. API Endpoint Planning
+
+The API will provide communication between the future application and the database.
+
+Area	Example Method	Example Endpoint	Purpose
+Authentication	POST	/api/auth/register	Register a user
+Authentication	POST	/api/auth/login	Log in
+Profile	GET	/api/users/me	View own profile
+Profile	PUT	/api/users/me	Update profile
+Events	GET	/api/events	View events
+Events	POST	/api/events	Create event
+Events	PUT	/api/events/{id}	Update event
+Events	DELETE	/api/events/{id}	Delete event
+Categories	GET	/api/events/{id}/categories	View categories
+Categories	POST	/api/events/{id}/categories	Create category
+Enrolments	POST	/api/events/{id}/enrolments	Enrol in event
+Enrolments	GET	/api/users/me/enrolments	View own enrolments
+Results	POST	/api/enrolments/{id}/result	Capture result
+Results	GET	/api/users/me/results	View own results
+
+The complete API plan is available in:
+
+docs/api_endpoint_plan.md
