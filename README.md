@@ -14,3 +14,27 @@ The system is designed to replace paper-based registration and spreadsheet-drive
 RaceDay allows Event Organisers to manage events, categories, routes, enrolments and participant results, while Participants can register accounts, browse upcoming events, enrol in races and track their results history.
 
 Note: Part 1 contains no application code. It focuses on system planning, database design, API planning and documentation before development begins in Part 2.
+
+
+2. System Planning — 20 Key Points
+#	Area	Description
+1	System Overview	RaceDay is a full-stack, API-driven event management platform for running, walking and cycling events.
+2	Problem Statement	Paper forms and spreadsheets can cause duplicate registrations, data-entry errors, lost information and increased administrative work.
+3	Proposed Solution	RaceDay provides a centralised digital platform for managing events, participants, categories, enrolments, routes and results.
+4	System Objectives	The system aims to simplify event administration, improve registration, reduce errors and provide easy access to participant and event information.
+5	User Roles	The platform has two main roles: Organiser and Participant.
+6	Organiser Capabilities	Organisers can create, edit and delete events, manage categories, view enrolments and capture participant results.
+7	Participant Capabilities	Participants can register, log in, browse events, select categories, enrol and view their own enrolments and results.
+8	Database Design	RaceDay uses a relational SQL Server database called RaceDayDB to store and manage system information.
+9	Users Entity	Stores user information including UserID, name, email, password information, contact details and role.
+10	Events Entity	Stores event information such as event name, description, date, location and organiser.
+11	Categories Entity	Stores race categories associated with events, including different distances and age groups.
+12	Routes Entity	Stores route information and supports future features such as maps, GPS information and weather information.
+13	Enrolments Entity	Connects participants to events and categories. A participant can only enrol once in the same event.
+14	Results Entity	Stores participant race results such as finishing time, position and result status.
+15	Relationships	Primary keys, foreign keys and cardinality define relationships between Users, Events, Categories, Routes, Enrolments and Results.
+16	API Planning	The API is divided into Authentication, User Profile, Events, Categories, Enrolments and Results using GET, POST, PUT and DELETE methods.
+17	Security & Integrity	Planned security includes authentication, authorisation, password hashing and input validation. Database constraints protect data integrity.
+18	Sample Data	The database contains 2 Organisers, 2 Participants, 3 Events, categories, routes, enrolments and sample result data.
+19	CI/CD & GitHub	GitHub Actions automatically checks that the required planning documents and README are present whenever changes are pushed.
+20	Testing & Future Development	The database can be tested in SSMS using SQL queries. Future versions may include payments, GPS routes, live weather, QR check-in, notifications and live results.
