@@ -48,6 +48,3 @@ A GitHub Actions workflow (`.github/workflows/validate-docs.yml`) runs on every 
 3. Execute the script (F5). It will create the `RaceDayDB` database, all six tables with constraints, and seed the sample data described above.
 4. Verify with `SELECT * FROM RaceDayDB.dbo.Events;` (and the other tables) that the seed data loaded correctly.
 
-## AI Disclosure
-
-Parts of this planning documentation (ERD layout, endpoint plan drafting, and SQL script scaffolding) were produced with the assistance of an AI tool and then reviewed, adjusted, and verified by the student before submission, in line with the POE's AI disclosure instruction.
