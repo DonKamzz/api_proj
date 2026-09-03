@@ -25,3 +25,9 @@ This part of the POE contains **no application code**. It documents the planning
 | `docs/raceday_erd.png` (+ `.svg` source) | Section A | Entity Relationship Diagram — 6 entities (Users, Events, Categories, Routes, Enrolments, Results) with primary keys, foreign keys, and cardinality. |
 | `docs/api_endpoint_plan.md` | Section B | Full API endpoint plan covering Authentication, User Profile, Events, Categories, Event Enrolments, and Results. |
 | `docs/raceday_schema.sql` | Section C | SQL Server script — creates all six tables with constraints and seeds realistic sample data (2 Organisers, 2 Participants, 3 Events, categories, routes, enrolments, a sample result). |
+## Design Notes
+
+- The ERD includes a **Routes** entity in addition to the required core entities, to support the platform's "live weather and route information" feature described in the background brief — this also lifts the design past the minimum six-entity requirement with a genuinely useful table rather than a padding one.
+- `Users` uses a single table with a `Role` column (`Organiser` / `Participant`) rather than two separate tables, since both roles share the same core attributes (name, email, password, contact details) and only differ in behaviour, which is enforced at the API/application layer in Part 2 — not at the schema level.
+- An Enrolment is unique per `(ParticipantID, EventID)` — a Participant can only enrol once per event — and a Result is unique per `EnrolmentID`, reflecting that at most one result is captured per enrolment.
+- The SQL script was written to match the ERD exactly; there are no deliberate differences between the two.
