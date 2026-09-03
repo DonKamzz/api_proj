@@ -38,3 +38,33 @@ Note: Part 1 contains no application code. It focuses on system planning, databa
 18	Sample Data	The database contains 2 Organisers, 2 Participants, 3 Events, categories, routes, enrolments and sample result data.
 19	CI/CD & GitHub	GitHub Actions automatically checks that the required planning documents and README are present whenever changes are pushed.
 20	Testing & Future Development	The database can be tested in SSMS using SQL queries. Future versions may include payments, GPS routes, live weather, QR check-in, notifications and live results.
+
+   3. User Roles
+Organiser
+
+Organisers are responsible for managing sporting events.
+
+Organisers can:
+
+Create events
+Edit events
+Delete events
+Create and manage categories
+View event enrolments
+Capture participant results
+Manage event route information
+Participant
+
+Participants use RaceDay to find and participate in events.
+
+Participants can:
+
+Register an account
+Log in
+Update their profile
+Browse upcoming events
+View event categories
+View route information
+Enrol in events
+View their own enrolments
+View their own results history
