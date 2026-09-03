@@ -10,3 +10,9 @@ RaceDay is a full-stack, API-driven event management platform built for the Sout
 
 This part of the POE contains **no application code**. It documents the planning work completed before development begins in Part 2: the database design (ERD), the API surface (endpoint plan), and the database creation script.
 
+## Roles
+
+| Role | Capabilities |
+|---|---|
+| **Organiser** | Create, edit, and delete events; manage event categories; capture participant results; view all enrolments for their events. |
+| **Participant** | Register an account; browse events; enrol in an event by selecting a category; view their own enrolments; track their own results. |
