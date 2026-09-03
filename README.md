@@ -90,3 +90,37 @@ Users → Enrolments	1 : Many
 Events → Enrolments	1 : Many
 Categories → Enrolments	1 : Many
 Enrolments → Results	1 : 0..1
+
+5. Important Database Rules
+
+The database uses constraints to maintain reliable data.
+
+Primary Keys
+
+Each table has a unique primary key:
+
+UserID
+EventID
+CategoryID
+RouteID
+EnrolmentID
+ResultID
+Foreign Keys
+
+Foreign keys connect related tables and maintain referential integrity.
+
+Unique Enrolment
+
+A participant cannot enrol in the same event twice.
+
+ParticipantID + EventID
+
+is unique.
+
+Unique Result
+
+Each enrolment can have a maximum of one result.
+
+EnrolmentID
+
+is unique in the Results table.
