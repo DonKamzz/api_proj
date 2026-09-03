@@ -80,3 +80,13 @@ Categories	Stores race categories belonging to events
 Routes	Stores route information for events
 Enrolments	Connects participants to events and categories
 Results	Stores participant race results
+
+Database Relationships
+Relationship	Cardinality
+Users → Events	1 : Many
+Events → Categories	1 : Many
+Events → Routes	1 : Many
+Users → Enrolments	1 : Many
+Events → Enrolments	1 : Many
+Categories → Enrolments	1 : Many
+Enrolments → Results	1 : 0..1
