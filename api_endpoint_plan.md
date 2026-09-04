@@ -19,7 +19,9 @@ This plan is built directly from the RaceDay ERD (`raceday_erd.png`) and `raceda
 | HTTP Method | Route | Description | Role Required | Request Body | Expected Response |
 |---|---|---|---|---|---|
 | GET | `/api/users/me` | Returns the logged-in user's own profile. | Any | None | `200 OK` – profile object • `401 Unauthorized` |
-| PUT | `/api/users/me` | Updates the logged-in user's own profile (both roles can update their own details). | Any | `{ firstName, lastName, phoneNumber, profilePictureUrl }` | `200 OK` – updated profile • `400 Bad Request` – validation failed • `401 Unauthorized` |
+| PUT | `/api/users/me` | Updates the logged-in user's own profile (both roles can update their own details). | Any | `{ firstName, lastName, phoneNumber }` | `200 OK` – updated profile • `400 Bad Request` – validation failed • `401 Unauthorized` |
+
+> **Note:** Profile picture upload (`profilePictureUrl`) is introduced in Part 3 alongside Azure Blob Storage integration, per the POE's Part 3 requirements. It is intentionally excluded here so this plan matches the Part 1 database exactly; the `Users` table and this endpoint will both be extended with a `ProfilePictureUrl` column when that work begins.
 
 ## 3. Events
 
