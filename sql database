@@ -1,0 +1,310 @@
+/* =====================================================================
+   THE INDEPENDENT INSTITUTE OF EDUCATION
+   RaceDay - Database Creation Script
+
+   Module Name:    PROGRAMMING 2B
+   Module Code:    PROG6212/w
+   Assessment:     Portfolio of Evidence - Part 1: System Planning and Database
+   Student Name:   Kamogelo Leburu
+   Student Number: ST10459758
+
+   Engine: SQL Server (SSMS)
+   Notes:
+     - This script matches the RaceDay ERD (raceday_erd.png / raceday_erd.svg)
+       and the DBML/API endpoint plan (api_endpoint_plan.md) exactly - six
+       entities: Users, Events, Categories, Routes, Enrolments, Results.
+     - Run this script on a clean SQL Server instance.
+     - PasswordHash values in the seed data are placeholder hashes
+       (in Part 2 real passwords are hashed with PBKDF2 before being
+       stored - see RaceDay.Api/Auth/PasswordHasher.cs).
+   ===================================================================== */
+
+IF DB_ID('RaceDayDB') IS NOT NULL
+BEGIN
+    ALTER DATABASE RaceDayDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE RaceDayDB;
+END
+GO
+
+CREATE DATABASE RaceDayDB;
+GO
+
+
+/* ---------------------------------------------------------------------
+   1. Users
+   Stores both Organisers and Participants. The Role column determines
+   which functionality the account can access (enforced at API level).
+   --------------------------------------------------------------------- */
+CREATE TABLE Users (
+    UserID          INT IDENTITY(1,1)   NOT NULL,
+    FirstName       NVARCHAR(50)        NOT NULL,
+    LastName        NVARCHAR(50)        NOT NULL,
+    Email           NVARCHAR(100)       NOT NULL,
+    PasswordHash    NVARCHAR(255)       NOT NULL,
+    Role            NVARCHAR(20)        NOT NULL,
+    PhoneNumber     NVARCHAR(20)        NULL,
+    CreatedAt       DATETIME2           NOT NULL DEFAULT (SYSUTCDATETIME()),
+    CONSTRAINT PK_Users PRIMARY KEY (UserID),
+    CONSTRAINT UQ_Users_Email UNIQUE (Email),
+    CONSTRAINT CK_Users_Role CHECK (Role IN ('Organiser', 'Participant'))
+);
+GO
+
+/* ---------------------------------------------------------------------
+   2. Events
+   Created and managed by an Organiser (Users.Role = 'Organiser').
+   --------------------------------------------------------------------- */
+CREATE TABLE Events (
+    EventID         INT IDENTITY(1,1)   NOT NULL,
+    OrganiserID     INT                 NOT NULL,
+    Name            NVARCHAR(150)       NOT NULL,
+    Description     NVARCHAR(MAX)       NULL,
+    EventDate       DATETIME2           NOT NULL,
+    Location        NVARCHAR(150)       NOT NULL,
+    DistanceKm      DECIMAL(6,2)        NOT NULL,
+    EventType       NVARCHAR(20)        NOT NULL,
+    BannerImageUrl  NVARCHAR(500)       NULL,
+    CreatedAt       DATETIME2           NOT NULL DEFAULT (SYSUTCDATETIME()),
+    CONSTRAINT PK_Events PRIMARY KEY (EventID),
+    CONSTRAINT FK_Events_Organiser FOREIGN KEY (OrganiserID)
+        REFERENCES Users (UserID),
+    CONSTRAINT CK_Events_Type CHECK (EventType IN ('Run', 'Walk', 'Cycle')),
+    CONSTRAINT CK_Events_Distance CHECK (DistanceKm > 0)
+);
+GO
+
+/* ---------------------------------------------------------------------
+   3. Categories
+   Age or distance categories defined per event by its Organiser.
+   --------------------------------------------------------------------- */
+CREATE TABLE Categories (
+    CategoryID      INT IDENTITY(1,1)   NOT NULL,
+    EventID         INT                 NOT NULL,
+    CategoryName    NVARCHAR(50)        NOT NULL,
+    MinAge          INT                 NULL,
+    MaxAge          INT                 NULL,
+    DistanceKm      DECIMAL(6,2)        NULL,
+    CONSTRAINT PK_Categories PRIMARY KEY (CategoryID),
+    CONSTRAINT FK_Categories_Event FOREIGN KEY (EventID)
+        REFERENCES Events (EventID) ON DELETE CASCADE,
+    CONSTRAINT CK_Categories_Age CHECK (MinAge IS NULL OR MaxAge IS NULL OR MinAge <= MaxAge)
+);
+GO
+
+/* ---------------------------------------------------------------------
+   4. Routes
+   Supports the "route information" participants use to prepare for
+   race day. One event may have one or more routes (e.g. 10km / 21km).
+   --------------------------------------------------------------------- */
+CREATE TABLE Routes (
+    RouteID         INT IDENTITY(1,1)   NOT NULL,
+    EventID         INT                 NOT NULL,
+    RouteName       NVARCHAR(100)       NOT NULL,
+    DistanceKm      DECIMAL(6,2)        NOT NULL,
+    ElevationGainM  INT                 NULL,
+    StartPoint      NVARCHAR(150)       NULL,
+    EndPoint        NVARCHAR(150)       NULL,
+    MapUrl          NVARCHAR(500)       NULL,
+    CONSTRAINT PK_Routes PRIMARY KEY (RouteID),
+    CONSTRAINT FK_Routes_Event FOREIGN KEY (EventID)
+        REFERENCES Events (EventID) ON DELETE CASCADE
+);
+GO
+
+/* ---------------------------------------------------------------------
+   5. Enrolments
+   Links a Participant to an Event and the Category they selected.
+   A participant may only enrol once per event.
+   --------------------------------------------------------------------- */
+CREATE TABLE Enrolments (
+    EnrolmentID      INT IDENTITY(1,1)  NOT NULL,
+    ParticipantID    INT                NOT NULL,
+    EventID          INT                NOT NULL,
+    CategoryID       INT                NOT NULL,
+    EnrolmentStatus  NVARCHAR(20)       NOT NULL DEFAULT ('Pending'),
+    EnrolmentDate    DATETIME2          NOT NULL DEFAULT (SYSUTCDATETIME()),
+    CONSTRAINT PK_Enrolments PRIMARY KEY (EnrolmentID),
+    CONSTRAINT FK_Enrolments_Participant FOREIGN KEY (ParticipantID)
+        REFERENCES Users (UserID),
+    CONSTRAINT FK_Enrolments_Event FOREIGN KEY (EventID)
+        REFERENCES Events (EventID),
+    CONSTRAINT FK_Enrolments_Category FOREIGN KEY (CategoryID)
+        REFERENCES Categories (CategoryID),
+    CONSTRAINT UQ_Enrolments_Participant_Event UNIQUE (ParticipantID, EventID),
+    CONSTRAINT CK_Enrolments_Status CHECK (EnrolmentStatus IN ('Pending', 'Confirmed', 'Cancelled'))
+);
+GO
+
+/* ---------------------------------------------------------------------
+   6. Results
+   Captured by the Organiser after an event concludes. One result per
+   enrolment at most (UNIQUE on EnrolmentID).
+   --------------------------------------------------------------------- */
+CREATE TABLE Results (
+    ResultID           INT IDENTITY(1,1) NOT NULL,
+    EnrolmentID        INT               NOT NULL,
+    FinishTimeSeconds  INT               NOT NULL,
+    FinishPosition     INT               NOT NULL,
+    TotalFinishers     INT               NOT NULL,
+    PublishedAt        DATETIME2         NOT NULL DEFAULT (SYSUTCDATETIME()),
+    CONSTRAINT PK_Results PRIMARY KEY (ResultID),
+    CONSTRAINT FK_Results_Enrolment FOREIGN KEY (EnrolmentID)
+        REFERENCES Enrolments (EnrolmentID),
+    CONSTRAINT UQ_Results_Enrolment UNIQUE (EnrolmentID),
+    CONSTRAINT CK_Results_Position CHECK (FinishPosition > 0 AND FinishPosition <= TotalFinishers)
+);
+GO
+
+
+/* =====================================================================
+   SEED DATA
+   ===================================================================== */
+
+-- Organisers (2)
+INSERT INTO Users (FirstName, LastName, Email, PasswordHash, Role, PhoneNumber)
+VALUES
+('Naledi', 'Khumalo', 'naledi.khumalo@raceday.co.za', 'AQAAAAIAAYagAAAAEPh1placeholderhashOrg1==', 'Organiser', '0821234567'),
+('Pieter', 'van Wyk',  'pieter.vanwyk@raceday.co.za',  'AQAAAAIAAYagAAAAEPh1placeholderhashOrg2==', 'Organiser', '0837654321');
+GO
+
+-- Participants (2)
+INSERT INTO Users (FirstName, LastName, Email, PasswordHash, Role, PhoneNumber)
+VALUES
+('Thandiwe', 'Mokoena', 'thandiwe.mokoena@gmail.com', 'AQAAAAIAAYagAAAAEPh1placeholderhashPar1==', 'Participant', '0712345678'),
+('Ryan', 'Botha', 'ryan.botha@gmail.com', 'AQAAAAIAAYagAAAAEPh1placeholderhashPar2==', 'Participant', '0798765432');
+GO
+
+-- Events (3)
+INSERT INTO Events (OrganiserID, Name, Description, EventDate, Location, DistanceKm, EventType, BannerImageUrl)
+VALUES
+(1, 'Johannesburg City Marathon', 'An iconic road race through the streets of Johannesburg.', '2026-10-04 06:00:00', 'Johannesburg, Gauteng', 42.20, 'Run', NULL),
+(1, 'Soweto Fun Walk',            'A family-friendly community walk supporting local charities.', '2026-09-13 07:00:00', 'Soweto, Gauteng', 5.00, 'Walk', NULL),
+(2, 'Cape Winelands Cycle Tour',  'A scenic cycling tour through the Cape Winelands.', '2026-11-08 06:30:00', 'Stellenbosch, Western Cape', 94.70, 'Cycle', NULL);
+GO
+
+-- Categories (for each event)
+INSERT INTO Categories (EventID, CategoryName, MinAge, MaxAge, DistanceKm)
+VALUES
+(1, 'Open',        18, NULL, 42.20),
+(1, 'Veteran 40+',  40, NULL, 42.20),
+(1, '21km Half',    18, NULL, 21.10),
+(2, 'Under 20',      0, 19, 5.00),
+(2, 'Senior',       20, NULL, 5.00),
+(3, '94.7km Individual', 18, NULL, 94.70),
+(3, '94.7km Team',       18, NULL, 94.70);
+GO
+
+-- Routes (for each event)
+INSERT INTO Routes (EventID, RouteName, DistanceKm, ElevationGainM, StartPoint, EndPoint, MapUrl)
+VALUES
+(1, 'Full Marathon Route', 42.20, 410, 'Sandton City',      'FNB Stadium', NULL),
+(2, 'Community 5km Loop',  5.00,  30,  'Soweto Theatre',    'Soweto Theatre', NULL),
+(3, 'Winelands 94.7 Route',94.70, 980, 'Stellenbosch Square','Franschhoek Square', NULL);
+GO
+
+-- Enrolments (sample)
+INSERT INTO Enrolments (ParticipantID, EventID, CategoryID, EnrolmentStatus)
+VALUES
+(3, 1, 1, 'Confirmed'),   -- Thandiwe -> JHB Marathon, Open
+(3, 3, 6, 'Pending'),     -- Thandiwe -> Cape Winelands Cycle Tour, Individual
+(4, 2, 5, 'Confirmed'),   -- Ryan -> Soweto Fun Walk, Senior
+(4, 1, 3, 'Confirmed');   -- Ryan -> JHB Marathon, 21km Half
+GO
+
+-- Results (sample, for a completed enrolment)
+INSERT INTO Results (EnrolmentID, FinishTimeSeconds, FinishPosition, TotalFinishers)
+VALUES
+(4, 5820, 47, 312);   -- Ryan's 21km Half result: 1h37m00s, 47th of 312
+GO
+
+/* =====================================================================
+   RaceDay - Database Verification Queries
+   Run these in SSMS AFTER executing raceday_schema.sql, to confirm the
+   database, tables, and seed data are all in place.
+   ===================================================================== */
+
+-- 1. Confirm all six tables exist
+SELECT TABLE_NAME
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_TYPE = 'BASE TABLE'
+ORDER BY TABLE_NAME;
+GO
+
+-- 2. Row count per table (quick sanity check that seed data loaded)
+SELECT 'Users'       AS TableName, COUNT(*) AS RowCount FROM Users
+UNION ALL SELECT 'Events',      COUNT(*) FROM Events
+UNION ALL SELECT 'Categories',  COUNT(*) FROM Categories
+UNION ALL SELECT 'Routes',      COUNT(*) FROM Routes
+UNION ALL SELECT 'Enrolments',  COUNT(*) FROM Enrolments
+UNION ALL SELECT 'Results',     COUNT(*) FROM Results;
+GO
+
+-- 3. View each table's contents individually
+SELECT * FROM Users;
+SELECT * FROM Events;
+SELECT * FROM Categories;
+SELECT * FROM Routes;
+SELECT * FROM Enrolments;
+SELECT * FROM Results;
+GO
+
+-- 4. Confirm primary keys, foreign keys, and constraints were created
+SELECT
+    tc.CONSTRAINT_NAME,
+    tc.TABLE_NAME,
+    tc.CONSTRAINT_TYPE
+FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+ORDER BY tc.TABLE_NAME, tc.CONSTRAINT_TYPE;
+GO
+
+-- 5. Relationship test: join across all six tables for a full picture
+--    of who is enrolled in what, under which category, and their result.
+SELECT
+    U.FirstName + ' ' + U.LastName     AS Participant,
+    E.Name                              AS EventName,
+    E.EventType,
+    C.CategoryName,
+    EN.EnrolmentStatus,
+    R.FinishTimeSeconds,
+    R.FinishPosition,
+    R.TotalFinishers
+FROM Enrolments EN
+JOIN Users U       ON EN.ParticipantID = U.UserID
+JOIN Events E      ON EN.EventID = E.EventID
+JOIN Categories C  ON EN.CategoryID = C.CategoryID
+LEFT JOIN Results R ON R.EnrolmentID = EN.EnrolmentID
+ORDER BY E.Name, C.CategoryName;
+GO
+
+-- 6. Confirm each Event's Organiser resolves correctly
+SELECT
+    E.Name       AS EventName,
+    E.EventDate,
+    E.Location,
+    U.FirstName + ' ' + U.LastName AS Organiser
+FROM Events E
+JOIN Users U ON E.OrganiserID = U.UserID
+ORDER BY E.EventDate;
+GO
+
+-- 7. Confirm each Event's Routes
+SELECT
+    E.Name       AS EventName,
+    RT.RouteName,
+    RT.DistanceKm,
+    RT.StartPoint,
+    RT.EndPoint
+FROM Routes RT
+JOIN Events E ON RT.EventID = E.EventID
+ORDER BY E.Name;
+GO
+
+-- 8. Prove the "one enrolment per participant per event" constraint works
+--    (this INSERT should FAIL with a unique-constraint violation).
+-- INSERT INTO Enrolments (ParticipantID, EventID, CategoryID, EnrolmentStatus)
+-- VALUES (3, 1, 1, 'Pending');  -- Thandiwe is already enrolled in EventID 1
+
+-- 9. Prove the Role check constraint works
+--    (this INSERT should FAIL - 'Admin' is not a valid role).
+-- INSERT INTO Users (FirstName, LastName, Email, PasswordHash, Role)
+-- VALUES ('Test', 'User', 'test@raceday.co.za', 'x', 'Admin');
