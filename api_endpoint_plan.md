@@ -62,6 +62,10 @@ This plan is built directly from the RaceDay ERD (`raceday_erd.png`) and `raceda
 
 ---
 
+POST   /api/events/{eventId}/categories    - Create new category
+PUT    /api/categories/{id}                - Update category
+DELETE /api/categories/{id}                - Delete category
+
 ### Coverage check against Part 2 functional requirements
 - **Authentication:** register + login ✔
 - **User Profile:** view + update own profile, both roles ✔
