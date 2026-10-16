@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>api_proj</name>
+    </assembly>
+    <members>
+        <member name="T:api_proj.Auth.ClaimsPrincipalExtensions">
+            <summary>
+            Small helpers for reading the logged-in user's ID and role from their
+            authentication cookie's claims (set at sign-in in AuthController).
+            [Authorize] / [Authorize(Roles = "...")] on controllers/actions already
+            handles "must be logged in" and "must have this role" - these helpers
+            are for the extra ownership checks the Build Guide's Part AB/AE/AF/AG
+            call for (e.g. confirming the logged-in Organiser owns the event
+            they're trying to edit), which [Authorize] alone can't express.
+            </summary>
+        </member>
+        <member name="M:api_proj.Auth.ClaimsPrincipalExtensions.GetUserId(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>Returns the logged-in user's ID from their claims, or null if not authenticated.</summary>
+        </member>
+        <member name="M:api_proj.Auth.ClaimsPrincipalExtensions.GetRole(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>Returns the logged-in user's role from their claims, or null if not authenticated.</summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:api_proj.Auth.PasswordHasher" -->
+        <member name="M:api_proj.Controllers.AuthController.Register(api_proj.DTOs.RegisterRequest)">
+            <summary>Registers a new account as either an Organiser or a Participant.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.AuthController.Login(api_proj.DTOs.LoginRequest)">
+            <summary>Verifies credentials and signs the user in with a cookie storing their ID and role.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.AuthController.Logout">
+            <summary>Ends the current session by signing the user out of their cookie.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.CategoriesController.GetCategoriesForEvent(System.Int32)">
+            <summary>Lists the age/distance categories available for an event.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.CategoriesController.CreateCategory(System.Int32,api_proj.DTOs.CategoryRequest)">
+            <summary>Adds a category to an event (owner Organiser only).</summary>
+        </member>
+        <member name="M:api_proj.Controllers.CategoriesController.UpdateCategory(System.Int32,api_proj.DTOs.CategoryRequest)">
+            <summary>Updates a category's details (owner Organiser only).</summary>
+        </member>
+        <member name="M:api_proj.Controllers.CategoriesController.DeleteCategory(System.Int32)">
+            <summary>Removes a category from an event (owner Organiser only).</summary>
+        </member>
+        <member name="M:api_proj.Controllers.EnrolmentsController.Enrol(System.Int32,api_proj.DTOs.EnrolRequest)">
+            <summary>Enrols the logged-in Participant into an event under a chosen category.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.EnrolmentsController.GetEnrolmentsForEvent(System.Int32)">
+            <summary>Returns all Participants enrolled in an event the Organiser owns.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.EnrolmentsController.CancelEnrolment(System.Int32)">
+            <summary>Cancels the logged-in Participant's own enrolment, provided the event has not started.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.EventsController.GetEvents(System.String,System.String,System.Nullable{System.DateTime})">
+            <summary>Lists all events, with optional filters.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.EventsController.GetEvent(System.Int32)">
+            <summary>Returns full details of one event, including its categories and routes.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.EventsController.CreateEvent(api_proj.DTOs.EventCreateRequest)">
+            <summary>Creates a new event owned by the logged-in Organiser.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.EventsController.UpdateEvent(System.Int32,api_proj.DTOs.EventUpdateRequest)">
+            <summary>Updates an event (owner Organiser only).</summary>
+        </member>
+        <member name="M:api_proj.Controllers.EventsController.DeleteEvent(System.Int32)">
+            <summary>Deletes an event (owner Organiser only).</summary>
+        </member>
+        <member name="M:api_proj.Controllers.ResultsController.CreateResult(System.Int32,api_proj.DTOs.ResultCreateRequest)">
+            <summary>Captures/publishes a finish time and position for an enrolled Participant after the event.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.ResultsController.UpdateResult(System.Int32,api_proj.DTOs.ResultUpdateRequest)">
+            <summary>Corrects a previously captured result (owner Organiser only).</summary>
+        </member>
+        <member name="M:api_proj.Controllers.ResultsController.GetResult(System.Int32)">
+            <summary>Returns one result (viewable by the owning Participant or the Organiser of that event).</summary>
+        </member>
+        <member name="M:api_proj.Controllers.UsersController.GetMe">
+            <summary>Returns the logged-in user's own profile.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.UsersController.UpdateMe(api_proj.DTOs.UpdateProfileRequest)">
+            <summary>Updates the logged-in user's own profile.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.UsersController.GetMyEnrolments">
+            <summary>Returns all events the logged-in Participant has enrolled in, with status.</summary>
+        </member>
+        <member name="M:api_proj.Controllers.UsersController.GetMyResults">
+            <summary>Returns the logged-in Participant's full personal race history.</summary>
+        </member>
+        <member name="P:api_proj.DTOs.RegisterRequest.Role">
+            <summary>Must be "Organiser" or "Participant".</summary>
+        </member>
+        <member name="P:api_proj.DTOs.EventCreateRequest.EventType">
+            <summary>Must be "Run", "Walk", or "Cycle".</summary>
+        </member>
+    </members>
+</doc>
