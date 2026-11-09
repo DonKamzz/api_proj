@@ -1,291 +1,156 @@
-# RaceDay — Part 1: System Planning & Database
+# RaceDay: Parts 2 and 3, REST API and MVC Web App
 
-**Module:** PROG6212/w — Programming 2B
-**Assessment:** Portfolio of Evidence — Part 1
-**Project:** RaceDay Event Management Platform
-**Database:** Microsoft SQL Server
+**Module:** PROG6212/w, Programming 2B
+**Student:** Kamogelo Leburu (ST10459758)
+**Assessment:** Portfolio of Evidence, Part 2 (RESTful API) and Part 3 (MVC web app, Azure Blob Storage, Docker)
 
----
+RaceDay is an event management platform for South African running, walking and cycling events. Organisers create and manage events, categories and results. Participants browse events, enter them and track their results.
 
-## 1. Project Overview
+## Solution structure
 
-RaceDay is a full-stack, API-driven event management platform for the South African road running, walking, and cycling community.
+```
+api_proj.sln
+├── api_proj/                 Part 2 and 3: ASP.NET Core Web API
+│   ├── Controllers/          Auth, Users, Events, Categories, Enrolments, Results
+│   ├── Models/               EF Core entities (match the Part 1 ERD)
+│   ├── Data/                 ApplicationDBContext (Code-First)
+│   ├── DTOs/                 Request and response models
+│   ├── Auth/                 BCrypt password hasher and claims helpers
+│   ├── Services/             BlobStorageService (Azure Blob Storage uploads)
+│   └── Program.cs
+├── api_proj.Tests/           xUnit tests, run against the real HTTP pipeline
+├── mvc_proj/                 Part 3: ASP.NET Core MVC web app (no database access)
+│   ├── Controllers/          Account, Home, Events, Participant, Organiser
+│   ├── Services/             ApiClient, the only way the MVC app reaches data
+│   ├── Filters/              SessionAuthorize (login and role checks)
+│   ├── Views/                Razor pages (Bootstrap and RaceDay theme)
+│   ├── wwwroot/css/site.css  RaceDay brand styling
+│   └── Dockerfile
+├── docker-compose.yml
+├── docs/part3_api_additions.md
+└── .github/workflows/dotnet-ci.yml
+```
 
-It replaces paper-based registration and spreadsheet-driven event management with a centralised digital platform. **Event Organisers** manage events, categories, routes, enrolments, and participant results, while **Participants** register accounts, browse upcoming events, enrol in races, and track their results history.
+## The two roles
 
-> **Note:** Part 1 contains no application code. It covers system planning, database design, and API planning before development begins in Part 2.
-
----
-
-## 2. At a Glance
-
-| # | Area | Summary |
-|--:|---|---|
-| 1 | System Overview | Full-stack, API-driven event management platform for running, walking, and cycling events. |
-| 2 | Problem Statement | Paper forms and spreadsheets cause duplicate registrations, data-entry errors, and lost information. |
-| 3 | Proposed Solution | A centralised digital platform for events, participants, categories, enrolments, routes, and results. |
-| 4 | System Objectives | Simplify event administration, improve registration accuracy, and give organisers and participants easy access to their data. |
-| 5 | User Roles | Two roles: **Organiser** and **Participant**. |
-| 6 | Database | SQL Server database, **RaceDayDB**, with six entities: Users, Events, Categories, Routes, Enrolments, Results. |
-| 7 | Relationships | Primary keys, foreign keys, and cardinality connect all six entities (see Section 4). |
-| 8 | API Planning | Endpoints grouped into Authentication, User Profile, Events, Categories, Enrolments, and Results (see `docs/api_endpoint_plan.md`). |
-| 9 | Security & Integrity | Planned for Part 2: authentication, role-based authorisation, password hashing, input validation, and database constraints. |
-| 10 | Sample Data | 2 Organisers, 2 Participants, 3 Events, plus categories, routes, and enrolments. |
-| 11 | CI/CD | GitHub Actions validates that all required planning documents are present on every push. |
-| 12 | Future Development | Database is verifiable in SSMS today; payments, GPS routes, live weather, and QR check-in are candidates for later phases. |
-
----
-
-## 3. User Roles
-
-### Organiser
-- Create, edit, and delete events
-- Create and manage categories
-- View event enrolments
-- Capture participant results
-- Manage event route information
-
-### Participant
-- Register an account and log in
-- Update their profile
-- Browse upcoming events and view categories and route information
-- Enrol in events
-- View their own enrolments and results history
-
----
-
-## 4. Database Design
-
-The RaceDay database contains six entities:
-
-| Entity | Purpose |
+| Role | What they can do |
 |---|---|
-| **Users** | Stores Organiser and Participant accounts |
-| **Events** | Stores sporting event information |
-| **Categories** | Stores race categories belonging to events |
-| **Routes** | Stores route information for events |
-| **Enrolments** | Connects participants to events and categories |
-| **Results** | Stores participant race results |
+| Organiser | Dashboard with enrolment counts, create, edit and delete events with a banner image, add and remove categories, view enrolments, capture and publish results. |
+| Participant | Browse and filter upcoming events, view event details and categories, enter an event by choosing a category, see enrolment status (green for Confirmed), see race results, update profile and profile picture. |
 
-### Relationships
+## How the MVC app talks to the API
 
-| Relationship | Cardinality |
+1. The MVC app has no database code and no business rules. Every page calls the API through `Services/ApiClient.cs`.
+2. When a user logs in, the API signs them in with its `RaceDayAuth` cookie. `ApiClient` stores that cookie in the user's MVC session and sends it with every later request, so the API still enforces roles.
+3. The MVC session stores the user's ID, role and first name. `SessionAuthorize` sends visitors who aren't logged in to the login page, and sends the wrong role to an access denied page. Logging out clears the session and signs the user out of the API.
+4. Images: the MVC app sends the file to the API as `multipart/form-data`. Only the API talks to Azure. The API stores the image in a private Azure Blob container and saves a signed, read-only link in the database. The MVC app displays that link.
+5. Errors from the API are converted to friendly messages in `ApiClient`. Unexpected errors and missing pages show a friendly page, never raw server output.
+
+## Setup and running
+
+### 1. Database
+
+Create `RaceDayDB` on your SQL Server instance. The connection string in `api_proj/appsettings.json` uses `(localdb)\PROGPOE`. Use one of these options:
+
+- Run `docs/raceday_schema.sql` (from Part 1) in SSMS, or
+- In Package Manager Console, with `api_proj` as the Default project, run `Add-Migration InitialCreate` then `Update-Database`.
+
+### 2. Azure Blob Storage (for banner and profile images)
+
+1. In the Azure portal, create a **Storage account** in a resource group, for example `raceday-rg`. Use a unique name in lowercase letters and numbers. This README uses `racedaystorage2003` as an example.
+2. Under **Security + networking**, click **Access keys**. Under **key1**, click **Show** and copy the **Connection string**.
+3. In Visual Studio, right-click `api_proj` and choose **Manage User Secrets**. Paste this, with your connection string in place of the placeholder:
+
+```json
+{
+  "AzureBlobStorage": {
+    "ConnectionString": "PASTE_YOUR_CONNECTION_STRING_HERE"
+  }
+}
+```
+
+Save the file. The connection string is stored outside the project folder, so it is not committed to GitHub.
+
+The API creates a private container named `raceday-images` the first time an image is uploaded. Images are served through signed links that stay valid for five years. You do not need to enable public blob access.
+
+**No Azure account?** Install Node.js, run `npm install -g azurite`, then start it with `azurite --location C:\azurite --blobPort 10000`. In User Secrets, use `"ConnectionString": "UseDevelopmentStorage=true"`. Images then only display on the machine running Azurite.
+
+### 3. Run the API and the MVC app together
+
+1. Right-click the solution, choose **Configure Startup Projects**, select **Multiple startup projects**, and set both `api_proj` and `mvc_proj` to **Start**.
+2. Press F5.
+   - API and Swagger: https://localhost:5001/swagger
+   - MVC web app: http://localhost:5100
+
+The MVC app reads the API address from `mvc_proj/appsettings.Development.json` (`ApiSettings:BaseUrl`).
+
+### 4. Run the MVC app in Docker
+
+The API keeps running from Visual Studio at https://localhost:5001. From the repository root, run:
+
+```
+docker compose up --build
+```
+
+Or, with plain Docker:
+
+```
+docker build -f mvc_proj/Dockerfile -t raceday-mvc .
+docker run -p 8080:8080 -e ApiSettings__BaseUrl=https://host.docker.internal:5001/ -e ApiSettings__AllowUntrustedCertificate=true raceday-mvc
+```
+
+Open http://localhost:8080. The container uses the same code as the local run. The only difference is the API address, passed as `ApiSettings__BaseUrl`. `host.docker.internal` lets the container reach the host machine. `AllowUntrustedCertificate` accepts the API's self-signed development certificate and must never be used in production.
+
+### 5. Unit tests
+
+```
+dotnet test api_proj.sln
+```
+
+| Test class | What it covers |
 |---|---|
-| Users → Events | 1 : Many |
-| Events → Categories | 1 : Many |
-| Events → Routes | 1 : Many |
-| Users → Enrolments | 1 : Many |
-| Events → Enrolments | 1 : Many |
-| Categories → Enrolments | 1 : Many |
-| Enrolments → Results | 1 : 0..1 |
+| AuthTests | Register, login (success and failure), cookie-protected access, logout |
+| EventManagementTests | Organiser event management, ownership checks, validation, 404 |
+| RoleEnforcementTests | Wrong role and not-logged-in users are rejected |
+| EnrolmentTests | Enrolment is recorded, duplicates are blocked, 404 and 401 handling |
+| Part3EndpointTests | Organiser dashboard list, image upload role and file checks, delete blocked when enrolments exist |
 
----
+## Demo flow
 
-## 5. Database Rules
+1. **Organiser:** sign up as an Organiser, log in, and click **New event**. Create an event and upload a banner image.
+2. **Organiser:** click **My events**, then **Categories** on that event. Add a category such as Open, with the distance set. Categories must exist before anyone can enter the event.
+3. **Participant:** log out (or use a private browser window), sign up as a Participant, log in, open the event from the home page, choose the category and click **Enter event**. Check **My enrolments**, where the status shows green.
+4. **Organiser:** log in, open **Dashboard** to see the enrolment count, then **Results** to enter a finish time, position and total finishers, and click **Save**.
+5. **Participant:** open **My results** to see the time and position.
 
-**Primary keys** — every table has its own: `UserID`, `EventID`, `CategoryID`, `RouteID`, `EnrolmentID`, `ResultID`.
+## Troubleshooting
 
-**Foreign keys** — connect related tables and maintain referential integrity.
-
-**Unique enrolment** — a participant cannot enrol in the same event twice: `(ParticipantID, EventID)` is unique.
-
-**Unique result** — each enrolment has at most one result: `EnrolmentID` is unique in the Results table.
-
----
-
-## 6. API Endpoint Planning
-
-A representative sample of the full plan — see `docs/api_endpoint_plan.md` for every endpoint, including request bodies and failure responses.
-
-| Area | Method | Endpoint | Purpose |
-|---|---|---|---|
-| Authentication | POST | `/api/auth/register` | Register a user |
-| Authentication | POST | `/api/auth/login` | Log in |
-| Profile | GET | `/api/users/me` | View own profile |
-| Profile | PUT | `/api/users/me` | Update profile |
-| Events | GET | `/api/events` | View events |
-| Events | POST | `/api/events` | Create event |
-| Events | PUT | `/api/events/{id}` | Update event |
-| Events | DELETE | `/api/events/{id}` | Delete event |
-| Categories | GET | `/api/events/{id}/categories` | View categories |
-| Categories | POST | `/api/events/{id}/categories` | Create category |
-| Enrolments | POST | `/api/events/{id}/enrolments` | Enrol in event |
-| Enrolments | GET | `/api/users/me/enrolments` | View own enrolments |
-| Results | POST | `/api/events/{id}/results` | Capture a result |
-| Results | GET | `/api/users/me/results` | View own results |
-
----
-
-## 7. Documentation Files
-
-```text
-docs/
-├── raceday_erd.png                Final Entity Relationship Diagram
-├── raceday_erd.svg                Editable/source ERD
-├── api_endpoint_plan.md           Full API endpoint plan
-├── RaceDay_API_Endpoint_Plan.docx Full API endpoint plan (Word format)
-├── raceday_schema.sql             SQL Server database creation and sample data
-└── verify_database.sql            Verification queries — run after raceday_schema.sql
-```
-
----
-
-## 8. SQL Server Database
-
-The database is called `RaceDayDB`. The script creates:
-
-- The database itself
-- Users, Events, Categories, Routes, Enrolments, and Results tables
-- Primary keys, foreign keys, and unique/check constraints
-- Sample seed data
-
----
-
-## 9. Sample Data
-
-| Data | Quantity |
-|---|--:|
-| Organisers | 2 |
-| Participants | 2 |
-| Events | 3 |
-| Categories | Multiple (per event) |
-| Routes | Multiple (per event) |
-| Enrolments | Multiple |
-| Results | Sample result |
-
-This data lets every relationship in the schema be verified before application development begins.
-
----
-
-## 10. Database Testing
-
-Run `docs/verify_database.sql` in SSMS immediately after `raceday_schema.sql`. It checks:
-
-1. All six tables exist (`INFORMATION_SCHEMA.TABLES`)
-2. Row counts per table, to confirm seed data loaded
-3. Full contents of every table
-4. Every primary key, foreign key, and constraint that was created
-5. A full relationship join — Participant → Event → Category → Enrolment Status → Result
-6. Each Event's Organiser resolves correctly
-7. Each Event's Routes
-8–9. Two commented-out negative tests — uncomment either one to prove a constraint actually rejects bad data (a duplicate enrolment, or an invalid Role) — good evidence to show live in the video walkthrough.
-
----
-
-## 11. Security Considerations (Planned for Part 2)
-
-- Password hashing
-- User authentication and role-based authorisation
-- Input validation and parameterised queries
-- Organiser permission checks, so an Organiser can only manage their own events and results
-- Participant-scoped data access, so a Participant can only see their own enrolments and results
-
----
-
-## 12. Data Privacy
-
-RaceDay stores personal information: names, email addresses, contact numbers, account details, and event participation history. Production development should account for the **Protection of Personal Information Act (POPIA)** when collecting, storing, and processing participant data.
-
----
-
-## 13. CI/CD
-
-```text
-.github/workflows/validate-docs.yml
-```
-
-Runs on every push and confirms the required files exist:
-
-```text
-README.md
-docs/raceday_erd.png
-docs/raceday_erd.svg
-docs/api_endpoint_plan.md
-docs/raceday_schema.sql
-docs/verify_database.sql
-```
-
-**CI screenshot:** *insert a screenshot of the green GitHub Actions run here before submission.*
-
----
-
-## 14. How to Run the SQL Script
-
-1. Open **SQL Server Management Studio (SSMS)**.
-2. Connect to a local or clean SQL Server instance.
-3. Open `docs/raceday_schema.sql`.
-4. Execute the script (**F5**).
-5. Confirm the `RaceDayDB` database was created.
-6. Open `docs/verify_database.sql` and run it to confirm the tables, constraints, and sample data (see Section 10).
-
----
-
-## 15. ERD
-
-```text
-docs/raceday_erd.png
-docs/raceday_erd.svg
-```
-
-Shows all six entities, their attributes, primary keys, foreign keys, relationships, and cardinality. The SQL schema was designed to match the ERD exactly.
-
----
-
-## 16. Design Decisions
-
-**Single Users table** — Organisers and Participants share one table, since both roles need the same core fields (name, email, password, contact details). Their different permissions are enforced at the API/application layer, not the schema.
-
-**Routes as a dedicated entity** — included because route information is central to the platform, and it leaves room for future GPS, elevation, and weather data without changing the core schema.
-
-**Enrolments as a junction table** — resolves the many-to-many relationship between Participants and Events, while also storing enrolment-specific data like status and date.
-
----
-
-## 17. Assumptions
-
-1. Every event has an organiser.
-2. Every category belongs to an event.
-3. Participants must have an account before enrolling.
-4. A participant can only enrol once per event.
-5. Each enrolment is associated with one category.
-6. Results can only be recorded against valid enrolments.
-7. Organisers manage their own events only.
-8. Authentication and authorisation are implemented in Part 2.
-9. SQL Server is the database management system.
-10. The application communicates with the database through the API, not directly.
-
----
-
-## 18. Future Enhancements
-
-Online payments, weather API integration, GPS route mapping, live race tracking and results, QR-code check-in, email/SMS notifications, a mobile app, organiser dashboards, advanced reporting, and digital race certificates — none of which require changing the core database design.
-
----
-
-## 19. Evidence Required for Submission
-
-| Evidence | Requirement |
+| Problem | Likely cause and fix |
 |---|---|
-| ERD | Screenshot/image of the completed ERD |
-| Database | Screenshot of RaceDayDB in SSMS |
-| Tables | Evidence showing all six tables |
-| Sample Data | Evidence showing inserted records |
-| SQL Execution | Screenshot showing successful script execution |
-| API Plan | Endpoint planning document |
-| CI/CD | Screenshot of the green GitHub Actions workflow |
-| Video | Unlisted YouTube walkthrough |
-| Repository | GitHub project repository |
+| Event page shows no enrol button | The event has no categories. Add one as the Organiser. |
+| Image shows "Public access is not permitted" | Old link from an earlier version. Upload the banner again. |
+| Upload returns 503 "not been configured" | User Secrets missing or misspelled. Check `AzureBlobStorage:ConnectionString`, then restart. |
+| Upload returns 503 "unavailable" | Connection string is wrong or copied incompletely. Recopy from Access keys. |
+| Azure portal shows no access or no subscription | Use an Azure for Students subscription or Azurite (see above). |
+| MVC pages send you to login | Session expired after 20 minutes idle. Log in again. |
+| "We could not reach the RaceDay API" | API not running, or `ApiSettings:BaseUrl` does not match its address. |
 
----
+## Part 3 rubric: where each item is addressed
 
-## 20. Video Walkthrough
+| Rubric criterion | Where it is addressed |
+|---|---|
+| Correct submission | This README (setup, Docker run command, video link), `mvc_proj/Dockerfile`, full source |
+| GitHub and CI/CD | `.github/workflows/dotnet-ci.yml` builds the API, MVC app and tests, runs the tests and builds the Docker image |
+| Authentication and role-based navigation | `AccountController` (register, login, logout), session stores user ID and role, `SessionAuthorizeAttribute`, role-specific menus in `Views/Shared/_Layout.cshtml` |
+| Organiser interface | `OrganiserController` and `Views/Organiser`: dashboard, events (create, edit, delete, banner), categories, enrolments, results |
+| Participant interface | `HomeController` (events and filters), `EventsController` (details and enrol), `ParticipantController` (my enrolments and results), `AccountController` (profile and picture) |
+| Azure Blob Storage | `api_proj/Services/BlobStorageService.cs`, `POST /api/events/{id}/banner`, `POST /api/users/me/profile-picture`. The MVC app only calls the API. |
+| Docker | `mvc_proj/Dockerfile` (multi-stage, non-root user), `docker-compose.yml`, run commands above |
+| UI design | Bootstrap plus `wwwroot/css/site.css`: RaceDay colours and fonts, colour-coded statuses, consistent layout, validation messages and friendly error pages |
+| Video | Link below |
 
-Cover, in order: an introduction to RaceDay and the problem it solves; the two user roles; a walkthrough of the ERD, relationships, and entities; the API endpoint plan; a live run of the SQL script in SSMS with sample data verification; and a demonstration of the GitHub repository and the green Actions workflow.
+## CI/CD
 
-**YouTube link:** *insert the unlisted walkthrough link here before submission.*
+`.github/workflows/dotnet-ci.yml` runs on every push. It restores packages, builds `api_proj`, `mvc_proj` and `api_proj.Tests` in Release, runs the tests, and separately builds the MVC Docker image.
 
----
 
-## Conclusion
-
-Part 1 establishes the foundation for RaceDay: system requirements, user roles, database structure, API endpoints, security considerations, and testing approach. The six entities — **Users, Events, Categories, Routes, Enrolments, and Results** — provide a structured foundation for managing sporting events and participant information. The ERD, API endpoint plan, and SQL script are designed to work together as a clear blueprint for the application development that follows in **Part 2**.
